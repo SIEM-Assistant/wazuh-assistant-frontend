@@ -28,7 +28,7 @@ const Sidebar = () => {
           {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
         </button>
       </div>
-
+{/* 
       {sidebarOpen && (
         <div className="mt-3">
           <div className="rounded-3 p-3" style={{ background: '#f8fafc', border: '1px solid #e5e7eb' }}>
@@ -37,7 +37,7 @@ const Sidebar = () => {
             <p className="small text-muted mt-2">Wazuh query generation and execution</p>
           </div>
         </div>
-      )}
+      )} */}
     </motion.aside>
   )
 }
