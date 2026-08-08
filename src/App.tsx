@@ -8,7 +8,6 @@ function App() {
     <AppProvider>
       <BrowserRouter>
         <Routes>
-          {/* <Route path="/" element={} /> */}
           <Route path="/" element={<FrontPage/>}/>
           <Route path="/main" element={<MainPage/>}/>
           <Route path="/playground" element={<PlaygroundPage />} />

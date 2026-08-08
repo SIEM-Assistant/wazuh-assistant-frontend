@@ -381,7 +381,7 @@ const FrontPage = () => {
 
           <div className="subtitle">
 
-            AI Powered Security Operations Assistant
+            AI Powered Automated Query Generation
 
           </div>
 
@@ -415,8 +415,6 @@ const FrontPage = () => {
           >
 
             Enter Hub
-
-            <ArrowRight size={20}/>
 
           </button>
 
