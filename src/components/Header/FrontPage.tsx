@@ -1,7 +1,10 @@
 import React from "react";
 import { Shield, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const FrontPage = () => {
+
+  const navigate = useNavigate();
 
   return (
     <>
@@ -129,6 +132,7 @@ const FrontPage = () => {
 
 
 
+
         .logo-circle svg {
 
           width:40px;
@@ -143,18 +147,13 @@ const FrontPage = () => {
 
         h1 {
 
-
           margin-top:15px;
-
 
           font-size:45px;
 
-
           letter-spacing:3px;
 
-
           font-weight:900;
-
 
         }
 
@@ -164,15 +163,11 @@ const FrontPage = () => {
 
         .subtitle {
 
-
           margin-top:8px;
-
 
           font-size:20px;
 
-
           color:#93c5fd;
-
 
         }
 
@@ -182,23 +177,18 @@ const FrontPage = () => {
 
         .description {
 
-
           margin:12px auto;
-
 
           max-width:600px;
 
-
           font-size:15px;
-
 
           line-height:1.5;
 
-
           color:#cbd5e1;
 
-
         }
+
 
 
 
@@ -285,6 +275,8 @@ const FrontPage = () => {
 
 
 
+
+
         .enter-button:hover {
 
 
@@ -305,6 +297,7 @@ const FrontPage = () => {
 
 
         }
+
 
 
 
@@ -385,6 +378,7 @@ const FrontPage = () => {
 
 
 
+
           <div className="subtitle">
 
             AI Powered Security Operations Assistant
@@ -412,13 +406,20 @@ const FrontPage = () => {
 
 
 
-          <button className="enter-button">
+          <button
+
+            className="enter-button"
+
+            onClick={() => navigate("/main")}
+
+          >
 
             Enter Hub
 
             <ArrowRight size={20}/>
 
           </button>
+
 
 
 
@@ -435,7 +436,6 @@ const FrontPage = () => {
 
 
     </>
-
   );
 
 };
