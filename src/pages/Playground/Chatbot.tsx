@@ -1,399 +1,591 @@
-import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
-import {
-  Shield,
-  Menu,
-  Plus,
-  MessageSquare,
-  Settings,
-  Send,
-  User,
-  Bot,
-  Copy,
-  Check,
-  Terminal,
-  ChevronLeft,
-} from "lucide-react";
-
+import {useEffect,useRef,useState} from "react";
+import {useNavigate} from "react-router-dom";
+import {Shield,Menu,Play,User,Bot,Copy,Check,Send} from "lucide-react";
 import "./Chatbot.css";
-
-type Message = {
-  role: "user" | "assistant";
-  content: string;
-  query?: string;
+const API_BASE_URL=import.meta.env.VITE_API_BASE_URL;
+type Message={
+role:"user"|"assistant";
+content:string;
+query?:string;
+result?:any;
 };
 
-const Chatbot = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-   const navigate = useNavigate();
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
-  }, [messages]);
-
-  const handleSend = () => {
-    const text = message.trim();
-
-    if (!text) {
-      return;
-    }
-
-    const userMessage: Message = {
-      role: "user",
-      content: text,
-    };
-
-    setMessages((previous) => [
-      ...previous,
-      userMessage,
-    ]);
-
-    setMessage("");
-
-    // Temporary response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        role: "assistant",
-        content:
-          "I generated a Wazuh query based on your request.",
-        query:
-          'rule.id:5710 AND location:"/var/log/auth.log"',
-      };
-
-      setMessages((previous) => [
-        ...previous,
-        assistantMessage,
-      ]);
-    }, 800);
-  };
-
-  const handleKeyDown = (
-    event: React.KeyboardEvent<HTMLTextAreaElement>
-  ) => {
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey
-    ) {
-      event.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleNewChat = () => {
-    setMessages([]);
-    setMessage("");
-
-    setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 100);
-  };
-
-  const handleCopy = async (
-    query: string,
-    index: number
-  ) => {
-    try {
-      await navigator.clipboard.writeText(query);
-
-      setCopiedIndex(index);
-
-      setTimeout(() => {
-        setCopiedIndex(null);
-      }, 1500);
-    } catch (error) {
-      console.error("Copy failed:", error);
-    }
-  };
-
-  return (
-    <div className="siem-chatbot">
-
-      {/* SIDEBAR */}
-
-      <aside
-        className={
-          sidebarOpen
-            ? "siem-sidebar"
-            : "siem-sidebar closed"
-        }
-      >
+function flattenObject(
+value:any,
+prefix="",
+result:any={}
+){
+if(value===null||value===undefined){
+result[prefix]=value;
+return result;
+}
 
-        <div className="sidebar-brand">
+if(typeof value!=="object"||Array.isArray(value)){
+result[prefix]=value;
+return result;
+}
 
-          <div className="sidebar-logo">
-            <Shield size={21} />
-          </div>
+Object.entries(value).forEach(([key,nestedValue])=>{
+const nextKey=prefix?`${prefix}.${key}`:key;
+flattenObject(nestedValue,nextKey,result);
+});
 
-          <div className="sidebar-title">
-            SIEM Assistant
-          </div>
+return result;
+}
 
-        </div>
+export default function Chatbot(){
 
-        <button
-          className="new-chat"
-          onClick={handleNewChat}
-        >
-          <Plus size={17} />
-          New Chat
-        </button>
+const [sidebarOpen,setSidebarOpen]=useState(true);
+const [message,setMessage]=useState("");
+const [messages,setMessages]=useState<Message[]>([]);
+const [loading,setLoading]=useState(false);
+const [copiedIndex,setCopiedIndex]=useState<number|null>(null);
 
-        <div className="sidebar-label">
-          Workspace
-        </div>
+const messagesEndRef=useRef<HTMLDivElement|null>(null);
+const navigate=useNavigate();
 
-        <div className="sidebar-item active" onClick={() => navigate("/playground")}>
-          <Terminal size={17} />
-          Playground
-        </div>
+useEffect(()=>{
+messagesEndRef.current?.scrollIntoView({
+behavior:"smooth"
+});
+},[messages]);
 
-        <div className="sidebar-item">
-          <MessageSquare size={17} />
-          Chat History
-        </div>
+const handleSend=async()=>{
 
-        <div className="sidebar-bottom">
+const text=message.trim();
 
-          <div className="sidebar-item">
-            <Settings size={17} />
-            Settings
-          </div>
+if(!text)return;
 
-        </div>
 
-      </aside>
+setMessages(prev=>[
+...prev,
+{
+role:"user",
+content:text
+}
+]);
 
-      {/* MAIN */}
+setMessage("");
+setLoading(true);
 
-      <main className="siem-main">
 
-        {/* HEADER */}
+try{
 
-        <header className="siem-header">
+const response=await fetch(
+`${API_BASE_URL}/generate-query`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+user_prompt:text
+})
+}
+);
 
-          <button
-            className="menu-button"
-            onClick={() =>
-              setSidebarOpen(!sidebarOpen)
-            }
-          >
 
-            {sidebarOpen ? (
-              <ChevronLeft size={20} />
-            ) : (
-              <Menu size={20} />
-            )}
+const data=await response.json();
 
-          </button>
-      
-          <div className="header-title" onClick={() => navigate("/playground")}>
-      
 
-            <Terminal size={17} />
+setMessages(prev=>[
+...prev,
+{
+role:"assistant",
+content:data.message||"Query generated successfully.",
+query:JSON.stringify(data.query,null,2)
+}
+]);
 
-            Playground
 
-            <span>• Wazuh</span>
+}catch{
 
-          </div>
+setMessages(prev=>[
+...prev,
+{
+role:"assistant",
+content:"Failed to generate query."
+}
+]);
 
-          <div className="backend-status">
+}
 
-            <span className="status-dot" />
+finally{
+setLoading(false);
+}
 
-            Backend Connected
-
-          </div>
-
-        </header>
-
-        {/* CHAT AREA */}
-
-        <section className="chat-area">
-
-          {messages.length === 0 ? (
-
-            <div className="welcome">
-
-              <div className="welcome-logo">
-                <Shield size={34} />
-              </div>
-
-              <h1 className="welcome-title">
-                How can I help with your SIEM?
-              </h1>
-
-              <p className="welcome-text">
-                Generate, customize and execute
-                Wazuh queries using natural language.
-                You stay in control of every query.
-              </p>
-
-            </div>
-
-          ) : (
-
-            <div className="messages">
-
-              {messages.map(
-                (item, index) => (
-
-                  <div
-                    key={index}
-                    className="message-row"
-                  >
-
-                    <div
-                      className={
-                        item.role === "user"
-                          ? "avatar user-avatar"
-                          : "avatar assistant-avatar"
-                      }
-                    >
-
-                      {item.role === "user" ? (
-                        <User size={17} />
-                      ) : (
-                        <Bot size={17} />
-                      )}
-
-                    </div>
-
-                    <div className="message-content">
-
-                      <div className="message-name">
-
-                        {item.role === "user"
-                          ? "You"
-                          : "SIEM Assistant"}
-
-                      </div>
-
-                      <div className="message-text">
-                        {item.content}
-                      </div>
-
-                      {item.query && (
-
-                        <div className="query-card">
-
-                          <div className="query-header">
-
-                            <Terminal size={14} />
-
-                            <span>
-                              Wazuh Query
-                            </span>
-
-                            <button
-                              className="copy-button"
-                              onClick={() =>
-                                handleCopy(
-                                  item.query!,
-                                  index
-                                )
-                              }
-                            >
-
-                              {copiedIndex ===
-                              index ? (
-                                <>
-                                  <Check size={14} />
-                                  Copied
-                                </>
-                              ) : (
-                                <>
-                                  <Copy size={14} />
-                                  Copy
-                                </>
-                              )}
-
-                            </button>
-
-                          </div>
-
-                          <pre className="query-code">
-                            {item.query}
-                          </pre>
-
-                          <div className="query-actions">
-
-                            <button className="query-button">
-                              Edit Query
-                            </button>
-
-                            <button className="query-button run-button">
-                              Run Query
-                            </button>
-
-                          </div>
-
-                        </div>
-
-                      )}
-
-                    </div>
-
-                  </div>
-
-                )
-              )}
-
-              <div ref={messagesEndRef} />
-
-            </div>
-
-          )}
-
-        </section>
-
-        {/* INPUT */}
-
-        <div className="input-area">
-
-          <div className="input-box">
-
-            <textarea
-              ref={textareaRef}
-              className="message-input"
-              rows={1}
-              value={message}
-              onChange={(event) =>
-                setMessage(event.target.value)
-              }
-              onKeyDown={handleKeyDown}
-              placeholder="Message SIEM Assistant..."
-            />
-
-            <button
-              className="send-button"
-              onClick={handleSend}
-              disabled={!message.trim()}
-            >
-              <Send size={17} />
-            </button>
-
-          </div>
-
-          <div className="disclaimer">
-            SIEM Assistant generates Wazuh queries.
-            Verify queries before execution.
-          </div>
-
-        </div>
-
-      </main>
-
-    </div>
-  );
 };
 
-export default Chatbot;
+const handleRunQuery=async(index:number)=>{
+
+const current=messages[index];
+
+if(!current.query)return;
+
+
+try{
+
+const response=await fetch(
+`${API_BASE_URL}/indexer-proxy`,
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:current.query
+}
+);
+
+const data=await response.json();
+
+
+setMessages(prev=>
+prev.map((msg,i)=>
+i===index
+?
+{
+...msg,
+result:data
+}
+:
+msg
+)
+);
+
+
+}catch(error){
+
+console.log(error);
+
+}
+
+};
+
+
+
+const handleCopy=async(
+query:string,
+index:number
+)=>{
+
+await navigator.clipboard.writeText(query);
+
+setCopiedIndex(index);
+
+setTimeout(()=>{
+setCopiedIndex(null);
+},1500);
+
+};
+
+const handleKeyDown=(e:React.KeyboardEvent)=>{
+
+if(e.key==="Enter"&&!e.shiftKey){
+
+e.preventDefault();
+
+handleSend();
+
+}
+
+};
+return(
+<div className="siem-chatbot">
+
+<div className={sidebarOpen?"siem-sidebar":"siem-sidebar closed"}>
+
+<div className="sidebar-brand">
+<div className="sidebar-logo">
+<Shield size={20}/>
+</div>
+<div className="sidebar-title">
+SIEM Assistant
+</div>
+</div>
+
+
+<div
+className="sidebar-item"
+onClick={()=>navigate("/playground")}
+>
+<Play size={16}/>
+Playground
+</div>
+
+
+<div className="sidebar-item active">
+<Bot size={16}/>
+Chat
+</div>
+</div>
+<div className="siem-main">
+
+
+<div className="siem-header">
+
+<button
+className="menu-button"
+onClick={()=>setSidebarOpen(!sidebarOpen)}
+>
+<Menu size={20}/>
+</button>
+
+<div className="header-title">
+SIEM Assistant
+</div>
+
+</div>
+
+<div className="chat-area">
+
+{
+messages.length===0
+
+?
+
+<div className="welcome">
+
+<div className="welcome-logo">
+</div>
+
+<h1 className="welcome-title">
+How can I help with your SIEM?
+</h1>
+
+<p className="welcome-text">
+Generate and execute Wazuh OpenSearch queries using natural language.
+</p>
+
+</div>
+
+:
+
+<div className="messages">
+
+
+{
+messages.map((item,index)=>(
+
+<div
+className="message-row"
+key={index}
+>
+
+<div className={
+item.role==="user"
+?
+"avatar user-avatar"
+:
+"avatar assistant-avatar"
+}>
+
+{
+item.role==="user"
+?
+<User size={18}/>
+:
+<Bot size={18}/>
+}
+
+</div>
+
+
+
+<div className="message-content">
+
+
+<div className="message-name">
+
+{
+item.role==="user"
+?
+"You"
+:
+"SIEM Assistant"
+}
+
+</div>
+
+<div className="message-text">
+{item.content}
+</div>
+
+{
+item.query&&
+
+<div className="query-card">
+
+
+<div className="query-header">
+
+Generated Query
+
+
+<button
+className="copy-button"
+onClick={()=>handleCopy(item.query!,index)}
+>
+
+{
+copiedIndex===index
+?
+<Check size={14}/>
+:
+<Copy size={14}/>
+}
+
+
+{
+copiedIndex===index
+?
+"Copied"
+:
+"Copy"
+}
+
+
+</button>
+
+
+</div>
+
+<pre className="query-code">
+{item.query}
+</pre>
+
+
+
+<button
+className="query-button run-button"
+onClick={()=>handleRunQuery(index)}
+>
+
+Run Query
+
+</button>
+
+
+</div>
+
+}
+
+{
+item.result?.hits?.hits &&
+
+
+<div className="table-container">
+
+
+<h3 className="table-title">
+
+Search Results {
+item.result.hits.hits.length
+} records
+
+</h3>
+
+<table className="result-table">
+
+
+<thead>
+
+<tr>
+
+
+{
+
+(()=>{
+
+const rows=item.result.hits.hits.map(
+(hit:any)=>({
+id:hit._id,
+...flattenObject(hit._source||{})
+})
+);
+
+const columns:string[]=[];
+
+
+rows.forEach((row:any)=>{
+
+Object.keys(row).forEach(key=>{
+
+if(!columns.includes(key)){
+columns.push(key);
+}
+
+});
+
+});
+
+
+return columns.map(col=>(
+
+<th key={col}>
+{col}
+</th>
+
+));
+
+
+})()
+
+}
+
+
+
+</tr>
+
+</thead>
+<tbody>
+
+{
+
+(()=>{
+
+
+const rows=item.result.hits.hits.map(
+(hit:any)=>({
+id:hit._id,
+...flattenObject(hit._source||{})
+})
+);
+
+
+const columns:string[]=[];
+
+
+rows.forEach((row:any)=>{
+
+Object.keys(row).forEach(key=>{
+
+if(!columns.includes(key)){
+columns.push(key);
+}
+
+});
+
+});
+return rows.map((row:any,rowIndex:number)=>(
+
+
+<tr key={row.id||rowIndex}>
+
+
+{
+
+columns.map(column=>(
+
+<td key={column}>
+
+{
+JSON.stringify(
+row[column],
+null,
+2
+) || "-"
+}
+
+</td>
+
+))
+
+}
+
+
+</tr>
+
+
+));
+
+
+})()
+
+
+}
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+}
+
+
+
+</div>
+
+
+</div>
+
+
+))
+
+}
+
+
+<div ref={messagesEndRef}/>
+
+
+</div>
+
+}
+
+
+</div>
+
+
+
+
+<div className="input-area">
+
+
+<div className="input-box">
+
+
+<textarea
+
+className="message-input"
+
+value={message}
+
+onChange={(e)=>setMessage(e.target.value)}
+
+onKeyDown={handleKeyDown}
+
+placeholder="Ask your SIEM query..."
+
+/>
+
+
+
+<button
+
+className="send-button"
+
+onClick={handleSend}
+
+disabled={loading}
+
+>
+
+<Send size={18}/>
+
+</button>
+</div>
+</div>
+
+
+
+</div>
+
+
+</div>
+
+);
+
+}

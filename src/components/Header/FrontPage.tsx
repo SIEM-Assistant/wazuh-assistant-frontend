@@ -372,62 +372,15 @@ const FrontPage = () => {
 
           </h1>
 
-
-
-
-
-
-
           <div className="subtitle">
 
             AI Powered Automated Query Generation
 
           </div>
 
-
-
-
-
-
-
-          <p className="description">
-
-            Monitor threats, analyze security alerts,
-            investigate incidents and improve SOC
-            operations with intelligent Wazuh assistance.
-
-          </p>
-
-
-
-
-
-
-
-
-          <button
-
-            className="enter-button"
-
-            onClick={() => navigate("/main")}
-
-          >
-
-            Enter Hub
-
-          </button>
-
-
-
-
-
-
+          <button className="enter-button" onClick={() => navigate("/chatbot")} >Enter Hub</button>
 
         </div>
-
-
-
-
 
       </div>
 
