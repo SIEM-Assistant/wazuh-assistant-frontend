@@ -1,4 +1,3 @@
-import React from "react";
 import { Shield, ArrowLeft, Bot, Activity } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -346,7 +345,9 @@ const MainPage = () => {
 
 
           <div className="features">
-
+           
+           <div className='feature-card'
+           onClick={() => navigate("/chatbot")}>
 
             <div className="feature-box">
 
@@ -359,6 +360,8 @@ const MainPage = () => {
               </p>
 
             </div>
+            </div>
+            
 
 
 
