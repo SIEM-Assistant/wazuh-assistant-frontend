@@ -1,75 +1,32 @@
-# React + TypeScript + Vite
+# AI Assistant Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## URLs and APIs used
 
-Currently, two official plugins are available:
+This frontend currently uses the following URL and API configuration:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Frontend development URL: http://localhost:5173
+  - This is the default Vite local development URL.
 
-## React Compiler
+- Backend base URL:
+  - Set through the environment variable VITE_API_BASE_URL.
+  - The value is read from [src/services/api.ts](src/services/api.ts).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Main API endpoint used:
+  - POST ${VITE_API_BASE_URL}/indexer-proxy
+  - This request is made from [src/pages/Playground/PlaygroundPage.tsx](src/pages/Playground/PlaygroundPage.tsx).
+  - It sends a JSON query body to the backend proxy for execution.
 
-## Expanding the ESLint configuration
+## Environment setup
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Create a .env file in the project root with:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```env
+VITE_API_BASE_URL=http://your-backend-url
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+If VITE_API_BASE_URL is not set, the app falls back to an empty base URL and uses a relative path.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Notes
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+- The current frontend does not hardcode any production URL.
+- The only API endpoint used in this frontend so far is /indexer-proxy.
