@@ -1,591 +1,456 @@
-import {useEffect,useRef,useState} from "react";
-import {useNavigate} from "react-router-dom";
-import {Shield,Menu,Play,User,Bot,Copy,Check,Send} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Shield, Menu, Play, User, Bot, Copy, Check, Send, Terminal } from "lucide-react";
 import "./Chatbot.css";
-const API_BASE_URL=import.meta.env.VITE_API_BASE_URL;
-type Message={
-role:"user"|"assistant";
-content:string;
-query?:string;
-result?:any;
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+  query?: string;
+  result?: any;
 };
 
-function flattenObject(
-value:any,
-prefix="",
-result:any={}
-){
-if(value===null||value===undefined){
-result[prefix]=value;
-return result;
-}
-
-if(typeof value!=="object"||Array.isArray(value)){
-result[prefix]=value;
-return result;
-}
-
-Object.entries(value).forEach(([key,nestedValue])=>{
-const nextKey=prefix?`${prefix}.${key}`:key;
-flattenObject(nestedValue,nextKey,result);
-});
-
-return result;
-}
-
-export default function Chatbot(){
-
-const [sidebarOpen,setSidebarOpen]=useState(true);
-const [message,setMessage]=useState("");
-const [messages,setMessages]=useState<Message[]>([]);
-const [loading,setLoading]=useState(false);
-const [copiedIndex,setCopiedIndex]=useState<number|null>(null);
-
-const messagesEndRef=useRef<HTMLDivElement|null>(null);
-const navigate=useNavigate();
-
-useEffect(()=>{
-messagesEndRef.current?.scrollIntoView({
-behavior:"smooth"
-});
-},[messages]);
-
-const handleSend=async()=>{
-
-const text=message.trim();
-
-if(!text)return;
-
-
-setMessages(prev=>[
-...prev,
-{
-role:"user",
-content:text
-}
-]);
-
-setMessage("");
-setLoading(true);
-
-
-try{
-
-const response=await fetch(
-`${API_BASE_URL}/generate-query`,
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-user_prompt:text
-})
-}
-);
-
-
-const data=await response.json();
-
-
-setMessages(prev=>[
-...prev,
-{
-role:"assistant",
-content:data.message||"Query generated successfully.",
-query:JSON.stringify(data.query,null,2)
-}
-]);
-
-
-}catch{
-
-setMessages(prev=>[
-...prev,
-{
-role:"assistant",
-content:"Failed to generate query."
-}
-]);
-
-}
-
-finally{
-setLoading(false);
-}
-
+const defaultPlaygroundQuery = {
+  size: 5,
+  _source: [
+    "@timestamp",
+    "agent.name",
+    "agent.ip",
+    "rule.id",
+    "rule.level",
+    "rule.description",
+    "decoder.name",
+    "full_log"
+  ],
+  query: {
+    bool: {
+      filter: [
+        {
+          term: {
+            "rule.id": "550"
+          }
+        }
+      ]
+    }
+  },
+  sort: [
+    {
+      "@timestamp": {
+        order: "desc"
+      }
+    }
+  ]
 };
 
-const handleRunQuery=async(index:number)=>{
-
-const current=messages[index];
-
-if(!current.query)return;
-
-
-try{
-
-const response=await fetch(
-`${API_BASE_URL}/indexer-proxy`,
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:current.query
-}
-);
-
-const data=await response.json();
-
-
-setMessages(prev=>
-prev.map((msg,i)=>
-i===index
-?
-{
-...msg,
-result:data
-}
-:
-msg
-)
-);
-
-
-}catch(error){
-
-console.log(error);
-
+function flattenObject(obj: any, prefix = ""): any {
+  let result: any = {};
+  Object.keys(obj || {}).forEach((key) => {
+    const value = obj[key];
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      Object.assign(result, flattenObject(value, `${prefix}${key}.`));
+    } else {
+      result[`${prefix}${key}`] = Array.isArray(value) ? value.join(", ") : value;
+    }
+  });
+  return result;
 }
 
-};
-
-
-
-const handleCopy=async(
-query:string,
-index:number
-)=>{
-
-await navigator.clipboard.writeText(query);
-
-setCopiedIndex(index);
-
-setTimeout(()=>{
-setCopiedIndex(null);
-},1500);
-
-};
-
-const handleKeyDown=(e:React.KeyboardEvent)=>{
-
-if(e.key==="Enter"&&!e.shiftKey){
-
-e.preventDefault();
-
-handleSend();
-
-}
-
-};
-return(
-<div className="siem-chatbot">
-
-<div className={sidebarOpen?"siem-sidebar":"siem-sidebar closed"}>
-
-<div className="sidebar-brand">
-<div className="sidebar-logo">
-<Shield size={20}/>
-</div>
-<div className="sidebar-title">
-SIEM Assistant
-</div>
-</div>
-
-
-<div
-className="sidebar-item"
-onClick={()=>navigate("/playground")}
->
-<Play size={16}/>
-Playground
-</div>
-
-
-<div className="sidebar-item active">
-<Bot size={16}/>
-Chat
-</div>
-</div>
-<div className="siem-main">
-
-
-<div className="siem-header">
-
-<button
-className="menu-button"
-onClick={()=>setSidebarOpen(!sidebarOpen)}
->
-<Menu size={20}/>
-</button>
-
-<div className="header-title">
-SIEM Assistant
-</div>
-
-</div>
-
-<div className="chat-area">
-
-{
-messages.length===0
-
-?
-
-<div className="welcome">
-
-<div className="welcome-logo">
-</div>
-
-<h1 className="welcome-title">
-How can I help with your SIEM?
-</h1>
-
-<p className="welcome-text">
-Generate and execute Wazuh OpenSearch queries using natural language.
-</p>
-
-</div>
-
-:
-
-<div className="messages">
-
-
-{
-messages.map((item,index)=>(
-
-<div
-className="message-row"
-key={index}
->
-
-<div className={
-item.role==="user"
-?
-"avatar user-avatar"
-:
-"avatar assistant-avatar"
-}>
-
-{
-item.role==="user"
-?
-<User size={18}/>
-:
-<Bot size={18}/>
-}
-
-</div>
-
-
-
-<div className="message-content">
-
-
-<div className="message-name">
-
-{
-item.role==="user"
-?
-"You"
-:
-"SIEM Assistant"
-}
-
-</div>
-
-<div className="message-text">
-{item.content}
-</div>
-
-{
-item.query&&
-
-<div className="query-card">
-
-
-<div className="query-header">
-
-Generated Query
-
-
-<button
-className="copy-button"
-onClick={()=>handleCopy(item.query!,index)}
->
-
-{
-copiedIndex===index
-?
-<Check size={14}/>
-:
-<Copy size={14}/>
-}
-
-
-{
-copiedIndex===index
-?
-"Copied"
-:
-"Copy"
-}
-
-
-</button>
-
-
-</div>
-
-<pre className="query-code">
-{item.query}
-</pre>
-
-
-
-<button
-className="query-button run-button"
-onClick={()=>handleRunQuery(index)}
->
-
-Run Query
-
-</button>
-
-
-</div>
-
-}
-
-{
-item.result?.hits?.hits &&
-
-
-<div className="table-container">
-
-
-<h3 className="table-title">
-
-Search Results {
-item.result.hits.hits.length
-} records
-
-</h3>
-
-<table className="result-table">
-
-
-<thead>
-
-<tr>
-
-
-{
-
-(()=>{
-
-const rows=item.result.hits.hits.map(
-(hit:any)=>({
-id:hit._id,
-...flattenObject(hit._source||{})
-})
-);
-
-const columns:string[]=[];
-
-
-rows.forEach((row:any)=>{
-
-Object.keys(row).forEach(key=>{
-
-if(!columns.includes(key)){
-columns.push(key);
-}
-
-});
-
-});
-
-
-return columns.map(col=>(
-
-<th key={col}>
-{col}
-</th>
-
-));
-
-
-})()
-
-}
-
-
-
-</tr>
-
-</thead>
-<tbody>
-
-{
-
-(()=>{
-
-
-const rows=item.result.hits.hits.map(
-(hit:any)=>({
-id:hit._id,
-...flattenObject(hit._source||{})
-})
-);
-
-
-const columns:string[]=[];
-
-
-rows.forEach((row:any)=>{
-
-Object.keys(row).forEach(key=>{
-
-if(!columns.includes(key)){
-columns.push(key);
-}
-
-});
-
-});
-return rows.map((row:any,rowIndex:number)=>(
-
-
-<tr key={row.id||rowIndex}>
-
-
-{
-
-columns.map(column=>(
-
-<td key={column}>
-
-{
-JSON.stringify(
-row[column],
-null,
-2
-) || "-"
-}
-
-</td>
-
-))
-
-}
-
-
-</tr>
-
-
-));
-
-
-})()
-
-
-}
-
-
-</tbody>
-
-
-</table>
-
-
-</div>
-
-}
-
-
-
-</div>
-
-
-</div>
-
-
-))
-
-}
-
-
-<div ref={messagesEndRef}/>
-
-
-</div>
-
-}
-
-
-</div>
-
-
-
-
-<div className="input-area">
-
-
-<div className="input-box">
-
-
-<textarea
-
-className="message-input"
-
-value={message}
-
-onChange={(e)=>setMessage(e.target.value)}
-
-onKeyDown={handleKeyDown}
-
-placeholder="Ask your SIEM query..."
-
-/>
-
-
-
-<button
-
-className="send-button"
-
-onClick={handleSend}
-
-disabled={loading}
-
->
-
-<Send size={18}/>
-
-</button>
-</div>
-</div>
-
-
-
-</div>
-
-
-</div>
-
-);
-
+export default function Chatbot() {
+  const [activeTab, setActiveTab] = useState<"chat" | "playground">("chat");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const [playgroundQuery, setPlaygroundQuery] = useState(
+    JSON.stringify(defaultPlaygroundQuery, null, 2)
+  );
+  const [playgroundResult, setPlaygroundResult] = useState<any>(null);
+  const [playgroundLoading, setPlaygroundLoading] = useState(false);
+  const [playgroundError, setPlaygroundError] = useState("");
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (activeTab === "chat") {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth"
+      });
+    }
+  }, [messages, activeTab]);
+
+  // Chat Handlers
+  const handleSend = async () => {
+    const text = message.trim();
+    if (!text) return;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: text
+      }
+    ]);
+
+    setMessage("");
+    setChatLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/generate-query`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_prompt: text
+        })
+      });
+
+      const data = await response.json();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: data.message || "Query generated successfully.",
+          query: JSON.stringify(data.query, null, 2)
+        }
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Failed to generate query."
+        }
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleRunChatQuery = async (index: number) => {
+    const current = messages[index];
+    if (!current.query) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/indexer-proxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: current.query
+      });
+
+      const data = await response.json();
+
+      setMessages((prev) =>
+        prev.map((msg, i) =>
+          i === index
+            ? {
+                ...msg,
+                result: data
+              }
+            : msg
+        )
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleCopy = async (query: string, index: number) => {
+    await navigator.clipboard.writeText(query);
+    setCopiedIndex(index);
+    setTimeout(() => {
+      setCopiedIndex(null);
+    }, 1500);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Playground Execution Handler
+  const executePlaygroundQuery = async () => {
+    setPlaygroundLoading(true);
+    setPlaygroundError("");
+    setPlaygroundResult(null);
+
+    try {
+      const parsedQuery = JSON.parse(playgroundQuery);
+
+      const response = await fetch(`${API_BASE_URL}/indexer-proxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(parsedQuery)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend error ${response.status}`);
+      }
+
+      const data = await response.json();
+      setPlaygroundResult(data);
+    } catch (err: any) {
+      setPlaygroundError(err.message || "Failed executing query");
+    } finally {
+      setPlaygroundLoading(false);
+    }
+  };
+
+  const playgroundRows = playgroundResult?.hits?.hits?.map((item: any) =>
+    flattenObject(item._source)
+  ) || [];
+
+  const playgroundColumns =
+    playgroundRows.length > 0 ? Object.keys(playgroundRows[0]) : [];
+
+  return (
+    <div className="siem-chatbot">
+      {/* Sidebar */}
+      <aside className={`siem-sidebar ${!sidebarOpen ? "closed" : ""}`}>
+        <div className="sidebar-brand">
+          <div className="sidebar-logo">
+            <Shield size={20} />
+          </div>
+          <span className="sidebar-title">SIEM Portal</span>
+        </div>
+        <div
+          className={`sidebar-item ${activeTab === "playground" ? "active" : ""}`}
+          onClick={() => setActiveTab("playground")}
+        >
+          <Terminal size={18} />
+          <span>Playground</span>
+        </div>
+        <div
+          className={`sidebar-item ${activeTab === "chat" ? "active" : ""}`}
+          onClick={() => setActiveTab("chat")}
+        >
+          <Bot size={18} />
+          <span>Chatbot</span>
+        </div>
+
+      </aside>
+
+      <main className="siem-main">
+        <header className="siem-header">
+          <button
+            className="menu-button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            <Menu size={20} />
+          </button>
+          <span className="header-title">
+            {activeTab === "chat" ? "SIEM Query Assistant" : "Wazuh Query Playground"}
+          </span>
+        </header>
+
+        {/* VIEW 1: CHATBOT */}
+        {activeTab === "chat" ? (
+          <>
+            <div className="chat-area">
+              <div className="messages">
+                {messages.length === 0 ? (
+                  <div>
+                    <h1>How can I help with your SIEM!</h1>
+                    <p>Generate and execute Wazuh OpenSearch queries using natural language.</p>
+                  </div>
+                ) : (
+                  messages.map((item, index) => {
+                    const hits = item.result?.hits?.hits || [];
+                    const rows = hits.map((hit: any) => flattenObject(hit._source));
+                    const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+
+                    return (
+                      <div key={index} className="message-row">
+                        <div
+                          className={`avatar ${
+                            item.role === "user" ? "user-avatar" : "assistant-avatar"
+                          }`}
+                        >
+                          {item.role === "user" ? <User size={18} /> : <Bot size={18} />}
+                        </div>
+
+                        <div className="message-content">
+                          <div className="message-name">
+                            {item.role === "user" ? "You" : "SIEM Assistant"}
+                          </div>
+
+                          <div className="message-text">{item.content}</div>
+
+                          {/* Query Card */}
+                          {item.query && (
+                            <div className="query-card">
+                              <div className="query-header">
+                                <span>Generated Query</span>
+                                <button
+                                  className="copy-button"
+                                  onClick={() => handleCopy(item.query!, index)}
+                                >
+                                  {copiedIndex === index ? (
+                                    <Check size={14} />
+                                  ) : (
+                                    <Copy size={14} />
+                                  )}
+                                  {copiedIndex === index ? "Copied" : "Copy"}
+                                </button>
+                              </div>
+                              <pre className="query-code">{item.query}</pre>
+                              <div className="query-actions">
+                                <button
+                                  className="query-button run-button"
+                                  onClick={() => handleRunChatQuery(index)}
+                                >
+                                  <Play size={14} style={{ marginRight: "6px" }} />
+                                  Run Query
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Results Table */}
+                          {item.result && (
+                            <div className="table-container">
+                              <div className="table-title">Wazuh Results</div>
+                              <div className="table-subtitle">
+                                Total Hits: {item.result?.hits?.total?.value || 0}
+                              </div>
+
+                              {rows.length > 0 ? (
+                                <table className="result-table">
+                                  <thead>
+                                    <tr>
+                                      {columns.map((col) => (
+                                        <th key={col}>{col}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {rows.map((row: any, rowIndex: number) => (
+                                      <tr key={rowIndex}>
+                                        {columns.map((col) => (
+                                          <td key={col}>{row[col] ?? "-"}</td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                <p className="no-records">No records found</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+
+            {/* Input Area */}
+            <div className="input-area">
+              <div className="input-box">
+                <textarea
+                  className="message-input"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask SIEM assistant..."
+                  rows={1}
+                />
+                <button
+                  className="send-button"
+                  onClick={handleSend}
+                  disabled={chatLoading || !message.trim()}
+                >
+                  <Send size={18} />
+                </button>
+              </div>
+              <div className="disclaimer">
+                Queries are executed against the Wazuh Indexer backend proxy.
+              </div>
+            </div>
+          </>
+        ) : (
+          /* VIEW 2: PLAYGROUND EMBEDDED */
+          <div className="playground-view">
+            <div className="playground-container">
+              <h2>Wazuh Query Playground</h2>
+              <p className="playground-subtitle">
+                Write an OpenSearch JSON query and execute it against Wazuh Indexer.
+              </p>
+
+              <div className="playground-card">
+                <textarea
+                  value={playgroundQuery}
+                  onChange={(e) => setPlaygroundQuery(e.target.value)}
+                  rows={16}
+                  className="playground-textarea"
+                />
+
+                <button
+                  className="query-button run-button playground-execute-btn"
+                  onClick={executePlaygroundQuery}
+                  disabled={playgroundLoading}
+                >
+                  <Play size={18} />
+                  {playgroundLoading ? "Executing..." : "Execute Query"}
+                </button>
+
+                {playgroundError && (
+                  <div className="playground-error">
+                    <AlertTriangle size={18} />
+                    <span>{playgroundError}</span>
+                  </div>
+                )}
+              </div>
+
+              {playgroundResult && (
+                <div className="table-container playground-results-card">
+                  <div className="table-title">Wazuh Results</div>
+                  <div className="table-subtitle">
+                    Total Hits: {playgroundResult?.hits?.total?.value || 0}
+                  </div>
+
+                  {playgroundRows.length > 0 ? (
+                    <table className="result-table">
+                      <thead>
+                        <tr>
+                          {playgroundColumns.map((col) => (
+                            <th key={col}>{col}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {playgroundRows.map((row: any, index: number) => (
+                          <tr key={index}>
+                            {playgroundColumns.map((col) => (
+                              <td key={col}>{row[col] ?? "-"}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="no-records">No records found</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }
