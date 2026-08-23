@@ -9,6 +9,7 @@ type Message = {
   content: string;
   query?: string;
   result?: any;
+  queryError?: string;
 };
 
 const defaultPlaygroundQuery = {
@@ -109,6 +110,10 @@ export default function Chatbot() {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`Backend error ${response.status}`);
+      }
+
       const data = await response.json();
 
       setMessages((prev) => [
@@ -132,9 +137,25 @@ export default function Chatbot() {
     }
   };
 
+  // Run edited chat query
   const handleRunChatQuery = async (index: number) => {
     const current = messages[index];
     if (!current.query) return;
+
+    // Validate JSON before sending
+    let parsedQuery;
+    try {
+      parsedQuery = JSON.parse(current.query);
+    } catch {
+      setMessages((prev) =>
+        prev.map((msg, i) =>
+          i === index
+            ? { ...msg, queryError: "Invalid JSON format. Please correct it before running." }
+            : msg
+        )
+      );
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/indexer-proxy`, {
@@ -142,8 +163,12 @@ export default function Chatbot() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: current.query
+        body: JSON.stringify(parsedQuery)
       });
+
+      if (!response.ok) {
+        throw new Error(`Backend error ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -152,14 +177,36 @@ export default function Chatbot() {
           i === index
             ? {
                 ...msg,
-                result: data
+                result: data,
+                queryError: undefined
               }
             : msg
         )
       );
-    } catch (error) {
-      console.log(error);
+    } catch {
+      setMessages((prev) =>
+        prev.map((msg, i) =>
+          i === index
+            ? { ...msg, queryError: "Failed executing query against indexer." }
+            : msg
+        )
+      );
     }
+  };
+
+  // Update query state on text edit
+  const handleQueryChange = (index: number, newQuery: string) => {
+    setMessages((prev) =>
+      prev.map((msg, i) =>
+        i === index
+          ? {
+              ...msg,
+              query: newQuery,
+              queryError: undefined
+            }
+          : msg
+      )
+    );
   };
 
   const handleCopy = async (query: string, index: number) => {
@@ -238,7 +285,6 @@ export default function Chatbot() {
           <Bot size={18} />
           <span>Chatbot</span>
         </div>
-
       </aside>
 
       <main className="siem-main">
@@ -287,11 +333,11 @@ export default function Chatbot() {
 
                           <div className="message-text">{item.content}</div>
 
-                          {/* Query Card */}
-                          {item.query && (
+                          {/* Editable Query Card */}
+                          {item.query !== undefined && (
                             <div className="query-card">
                               <div className="query-header">
-                                <span>Generated Query</span>
+                                <span>Generated Query (Editable)</span>
                                 <button
                                   className="copy-button"
                                   onClick={() => handleCopy(item.query!, index)}
@@ -304,7 +350,21 @@ export default function Chatbot() {
                                   {copiedIndex === index ? "Copied" : "Copy"}
                                 </button>
                               </div>
-                              <pre className="query-code">{item.query}</pre>
+
+                              <textarea
+                                className="query-textarea"
+                                value={item.query}
+                                onChange={(e) => handleQueryChange(index, e.target.value)}
+                                rows={10}
+                              />
+
+                              {item.queryError && (
+                                <div className="playground-error" style={{ marginTop: "8px" }}>
+                                  <AlertTriangle size={16} />
+                                  <span>{item.queryError}</span>
+                                </div>
+                              )}
+
                               <div className="query-actions">
                                 <button
                                   className="query-button run-button"
