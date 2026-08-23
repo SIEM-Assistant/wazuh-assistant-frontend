@@ -75,13 +75,18 @@ export default function Chatbot() {
   const [playgroundError, setPlaygroundError] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  // Ref to track if the state change was triggered by typing in the editor
+  const isEditingRef = useRef(false);
 
   useEffect(() => {
-    if (activeTab === "chat") {
+    // Only scroll to bottom if we are NOT currently editing an existing query
+    if (activeTab === "chat" && !isEditingRef.current) {
       messagesEndRef.current?.scrollIntoView({
         behavior: "smooth"
       });
     }
+    // Reset flag after render
+    isEditingRef.current = false;
   }, [messages, activeTab]);
 
   // Chat Handlers
@@ -89,6 +94,7 @@ export default function Chatbot() {
     const text = message.trim();
     if (!text) return;
 
+    isEditingRef.current = false; // New message sent: allow auto-scroll
     setMessages((prev) => [
       ...prev,
       {
@@ -117,6 +123,7 @@ export default function Chatbot() {
 
       const data = await response.json();
 
+      isEditingRef.current = false; // Response received: allow auto-scroll
       setMessages((prev) => [
         ...prev,
         {
@@ -126,6 +133,7 @@ export default function Chatbot() {
         }
       ]);
     } catch {
+      isEditingRef.current = false;
       setMessages((prev) => [
         ...prev,
         {
@@ -143,11 +151,11 @@ export default function Chatbot() {
     const current = messages[index];
     if (!current.query) return;
 
-    // Validate JSON before sending
     let parsedQuery;
     try {
       parsedQuery = JSON.parse(current.query);
     } catch {
+      isEditingRef.current = true;
       setMessages((prev) =>
         prev.map((msg, i) =>
           i === index
@@ -173,6 +181,7 @@ export default function Chatbot() {
 
       const data = await response.json();
 
+      isEditingRef.current = true; // Keep viewport position on result update
       setMessages((prev) =>
         prev.map((msg, i) =>
           i === index
@@ -185,6 +194,7 @@ export default function Chatbot() {
         )
       );
     } catch {
+      isEditingRef.current = true;
       setMessages((prev) =>
         prev.map((msg, i) =>
           i === index
@@ -195,8 +205,9 @@ export default function Chatbot() {
     }
   };
 
-  // Update query state on Monaco editor change
+  // Update query state on Monaco editor change without triggering scroll
   const handleQueryChange = (index: number, newQuery: string | undefined) => {
+    isEditingRef.current = true; // Flag editor change
     setMessages((prev) =>
       prev.map((msg, i) =>
         i === index
@@ -367,7 +378,11 @@ export default function Chatbot() {
                                     formatOnPaste: true,
                                     formatOnType: true,
                                     tabSize: 2,
-                                    padding: { top: 10, bottom: 10 }
+                                    padding: { top: 10, bottom: 10 },
+                                    fixedOverflowWidgets: true,
+                                    scrollbar: {
+                                      alwaysConsumeMouseWheel: false
+                                    }
                                   }}
                                 />
                               </div>
@@ -390,8 +405,6 @@ export default function Chatbot() {
                               </div>
                             </div>
                           )}
-
-                          {/* Results Table */}
                           {item.result && (
                             <div className="table-container">
                               <div className="table-title">Wazuh Results</div>
@@ -481,7 +494,11 @@ export default function Chatbot() {
                       formatOnPaste: true,
                       formatOnType: true,
                       tabSize: 2,
-                      padding: { top: 10, bottom: 10 }
+                      padding: { top: 10, bottom: 10 },
+                      fixedOverflowWidgets: true,
+                      scrollbar: {
+                        alwaysConsumeMouseWheel: false
+                      }
                     }}
                   />
                 </div>

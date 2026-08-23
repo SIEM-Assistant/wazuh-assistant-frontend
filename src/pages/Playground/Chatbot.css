@@ -131,6 +131,7 @@ body {
 .chat-area {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -246,6 +247,7 @@ body {
   width: 100%;
   border-bottom: 1px solid rgba(59, 130, 246, 0.15);
   overflow: hidden;
+  position: relative;
 }
 
 .editor-container .monaco-editor,
@@ -290,6 +292,7 @@ body {
 .playground-view {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 30px 25px;
 }
 
