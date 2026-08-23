@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Shield, Menu, Play, User, Bot, Copy, Check, Send, Terminal } from "lucide-react";
+import Editor from "@monaco-editor/react";
 import "./Chatbot.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -194,14 +195,14 @@ export default function Chatbot() {
     }
   };
 
-  // Update query state on text edit
-  const handleQueryChange = (index: number, newQuery: string) => {
+  // Update query state on Monaco editor change
+  const handleQueryChange = (index: number, newQuery: string | undefined) => {
     setMessages((prev) =>
       prev.map((msg, i) =>
         i === index
           ? {
               ...msg,
-              query: newQuery,
+              query: newQuery ?? "",
               queryError: undefined
             }
           : msg
@@ -333,7 +334,7 @@ export default function Chatbot() {
 
                           <div className="message-text">{item.content}</div>
 
-                          {/* Editable Query Card */}
+                          {/* Monaco Code Editor Query Card */}
                           {item.query !== undefined && (
                             <div className="query-card">
                               <div className="query-header">
@@ -351,12 +352,25 @@ export default function Chatbot() {
                                 </button>
                               </div>
 
-                              <textarea
-                                className="query-textarea"
-                                value={item.query}
-                                onChange={(e) => handleQueryChange(index, e.target.value)}
-                                rows={10}
-                              />
+                              <div className="editor-container chat-editor">
+                                <Editor
+                                  height="260px"
+                                  defaultLanguage="json"
+                                  theme="vs-dark"
+                                  value={item.query}
+                                  onChange={(val) => handleQueryChange(index, val)}
+                                  options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 13,
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    formatOnPaste: true,
+                                    formatOnType: true,
+                                    tabSize: 2,
+                                    padding: { top: 10, bottom: 10 }
+                                  }}
+                                />
+                              </div>
 
                               {item.queryError && (
                                 <div className="playground-error" style={{ marginTop: "8px" }}>
@@ -452,12 +466,25 @@ export default function Chatbot() {
               </p>
 
               <div className="playground-card">
-                <textarea
-                  value={playgroundQuery}
-                  onChange={(e) => setPlaygroundQuery(e.target.value)}
-                  rows={16}
-                  className="playground-textarea"
-                />
+                <div className="editor-container playground-editor">
+                  <Editor
+                    height="350px"
+                    defaultLanguage="json"
+                    theme="vs-dark"
+                    value={playgroundQuery}
+                    onChange={(val) => setPlaygroundQuery(val || "")}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      formatOnPaste: true,
+                      formatOnType: true,
+                      tabSize: 2,
+                      padding: { top: 10, bottom: 10 }
+                    }}
+                  />
+                </div>
 
                 <button
                   className="query-button run-button playground-execute-btn"

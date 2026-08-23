@@ -206,7 +206,7 @@ body {
   color: #cbd5e1;
 }
 
-/* Query Card Box */
+/* Query Card Box & Editor Wrapper */
 .query-card {
   margin-top: 15px;
   border-radius: 12px;
@@ -241,15 +241,21 @@ body {
   color: white;
 }
 
-.query-code {
-  padding: 18px;
-  margin: 0;
-  background: #020617;
-  color: #bfdbfe;
-  font-family: Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  overflow-x: auto;
+/* Monaco Editor Container Styles */
+.editor-container {
+  width: 100%;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+  overflow: hidden;
+}
+
+.editor-container .monaco-editor,
+.editor-container .monaco-editor .overflow-guard {
+  border-radius: 0;
+}
+
+.playground-editor {
+  border: 1px solid rgba(59, 130, 246, 0.55);
+  border-radius: 12px;
 }
 
 .query-actions {
@@ -257,7 +263,6 @@ body {
   display: flex;
   justify-content: flex-start;
   background: #020617;
-  border-top: 1px solid rgba(59, 130, 246, 0.15);
 }
 
 .query-button {
@@ -269,6 +274,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  transition: transform 0.15s ease, background 0.2s ease;
 }
 
 .run-button {
@@ -313,39 +319,21 @@ body {
   margin-bottom: 20px;
 }
 
-.playground-textarea {
-  width: 100%;
-  background: rgba(2, 6, 23, 0.95);
-  border: 1px solid rgba(59, 130, 246, 0.55);
-  border-radius: 12px;
-  color: #bfdbfe;
-  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  padding: 18px;
-  resize: vertical;
-  outline: none;
-}
-
-.playground-textarea:focus {
-  border-color: #0ea5e9;
-}
-
 .playground-execute-btn {
   margin-top: 16px;
 }
 
 .playground-error {
-  margin-top: 15px;
+  margin: 12px 14px;
   background: rgba(127, 29, 29, 0.25);
   border: 1px solid rgba(248, 113, 113, 0.45);
-  border-radius: 12px;
+  border-radius: 10px;
   color: #fecaca;
-  padding: 12px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .playground-results-card {
